@@ -14,14 +14,14 @@ class mpid_data_stats {
     void mpid_finalize();
 
     void mpid_call_start(int p_name);
-    void mpid_call_end(int p_name);
+    uint64_t mpid_call_end(int p_name);
 
     void mpid_call_stats(int p_count, int p_datatype, uint64_t p_time, int p_name);
     void mpid_traffic_pattern(int dest, int p_count, int p_datatype, int comm, int p_name);
 
     void mpid_add_communicator(MPI_Comm* newcomm);
 
-
+    bool is_me(int rank, MPI_Comm newcomm);
     /**
      * Functions to get the profile data as matrices for hdf5 output
      */   
@@ -48,6 +48,8 @@ class mpid_data_stats {
     // Map that had the rank in every comunicator
     // its mostly a translation table
     std::map<uint64_t,std::vector<int>> m_comm_rank;
+    // Stores my rank in every communicator I'm in
+    std::map<uint64_t, int> m_my_comm_ranks;
 
     struct mpi_call_t{
         uint64_t m_kbytes_sent;
@@ -73,6 +75,8 @@ class mpid_data_stats {
     std::map<uint64_t, std::map<int,mpi_pattern_t>> m_call_pattern;
 
     struct timeval m_timer_start, m_timer_end;
+    //This is for MPI functions
+    struct timeval m_func_timer_start, m_func_timer_end;
     uint64_t m_app_time;
     uint64_t m_mpi_acc_time;
 

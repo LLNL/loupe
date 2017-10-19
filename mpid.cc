@@ -39,12 +39,23 @@ mpid_data_stats::mpid_finalize(){
     m_app_time = (m_timer_end.tv_sec - m_timer_start.tv_sec)*1e6 + (m_timer_end.tv_usec - m_timer_start.tv_usec);
     m_app_time /= 1000;
     dump(this);
-    //std::ofstream myfile (std::to_string(m_rank)+".mpidata");;
-    //mpidata_report(myfile);
-    //mpidata_global_pattern(myfile);
-    //mpidata_call_pattern(myfile);
-    //myfile.close();
 }
+
+void 
+mpid_data_stats::mpid_call_start(int p_name){
+
+    gettimeofday(&m_func_timer_start, NULL);
+
+}
+
+uint64_t 
+mpid_data_stats::mpid_call_end(int p_name){
+    uint64_t elapsed;
+    gettimeofday(&m_func_timer_end, NULL);
+    elapsed = (m_func_timer_end.tv_sec - m_func_timer_start.tv_sec)*1e6 + (m_func_timer_end.tv_usec - m_func_timer_start.tv_usec);
+    return elapsed;
+}
+
 
 void 
 mpid_data_stats::mpid_call_stats(int p_count, int p_datatype, uint64_t p_time, int p_name){
@@ -153,23 +164,40 @@ mpid_data_stats::mpid_add_communicator(MPI_Comm* newcomm){
     int *world_ranks;
 
     //Lets get a comm->world translation
-    MPI_Comm_group(MPI_COMM_WORLD, &world_grp);
-    MPI_Comm_group(*newcomm, &grp); 
-    MPI_Group_size(grp, &grp_size);
+    PMPI_Comm_group(MPI_COMM_WORLD, &world_grp);
+    PMPI_Comm_group(*newcomm, &grp); 
+    PMPI_Group_size(grp, &grp_size);
     ranks = new int[grp_size];
     world_ranks = new int[grp_size];
     for (int i = 0; i < grp_size; i++)
         ranks[i] = i;
 
-    MPI_Group_translate_ranks(grp, grp_size, ranks, world_grp, world_ranks);
+    PMPI_Group_translate_ranks(grp, grp_size, ranks, world_grp, world_ranks);
     m_comm_rank[*newcomm].resize(grp_size);
     for (int i = 0; i < grp_size; i++){
         m_comm_rank[*newcomm][i] = world_ranks[i];
+        if(world_ranks[i] == m_rank)
+            m_my_comm_ranks[*newcomm] = i;
     }
 
     delete ranks;
     delete world_ranks;
 
+}
+
+
+bool 
+mpid_data_stats::is_me(int rank, MPI_Comm newcomm){
+   bool is_me = false;
+
+   if(rank == MPI_COMM_WORLD){
+       is_me = rank == m_rank;
+
+   }else if(m_my_comm_ranks.find(newcomm)!=m_my_comm_ranks.end()){
+       is_me = rank == m_my_comm_ranks[newcomm];
+   }
+
+   return is_me;
 }
 
 uint64_t 
