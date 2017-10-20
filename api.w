@@ -29,7 +29,7 @@ std::string g_f_names[] = { {{forallfn foo}}
 {{fn foo MPI_Init }}{
     {{callfn}}
     // Create the GLOBAL profiling data
-    g_mpi_stats = new mpid_data_stats("global");
+    g_mpi_stats = new mpid_data_stats("global", g_f_names);
     g_mpi_stats->mpid_init();
 }
 {{endfn}}
@@ -38,7 +38,7 @@ std::string g_f_names[] = { {{forallfn foo}}
 {{fn foo MPI_Init_thread }}{
     {{callfn}}
     // Create the GLOBAL profiling data
-    g_mpi_stats = new mpid_data_stats("global");
+    g_mpi_stats = new mpid_data_stats("global", g_f_names);
     g_mpi_stats->mpid_init();
 }
 {{endfn}}

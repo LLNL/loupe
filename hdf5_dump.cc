@@ -14,6 +14,11 @@
 
 #include "mpid.hh"
 
+// We need to create datasets with the max length of all ranks
+//
+int max_calls_size;
+int max_callsites_size;
+int max_pattern_size;
 
 std::string get_dump_file(const std::string& name) {
   std::ostringstream filename;
@@ -71,17 +76,26 @@ hid_t create_dump_file(const std::string& filename, mpid_data_stats* mpi_stats) 
     CALL PATTERN (undef)  
   */ 
   hsize_t dims[] = {(hsize_t)nprocs};
-  hsize_t dim_calls[] = {(hsize_t)nprocs, (hsize_t)mpi_stats->n_mpi_calls(), 4};
-  hsize_t dim_callsites[] = {(hsize_t)nprocs,(hsize_t)mpi_stats->n_mpi_callsites(), 4};
-  hsize_t dim_pattern[] = {(hsize_t)nprocs,(hsize_t)mpi_stats->size_pattern(), 3};
-  hsize_t dim_call_pattern[] = {(hsize_t)nprocs,(hsize_t)mpi_stats->size_call_pattern(), 4};
+
+  int calls_size = mpi_stats->n_mpi_calls();
+  int callsites_size = mpi_stats->n_mpi_callsites();
+  int pattern_size = mpi_stats->size_pattern();
+
+  PMPI_Allreduce(&calls_size,     &max_calls_size, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  PMPI_Allreduce(&callsites_size, &max_callsites_size, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+  PMPI_Allreduce(&pattern_size,   &max_pattern_size, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+
+  hsize_t dim_calls[] =     {(hsize_t)nprocs, (hsize_t)max_calls_size,     4};
+  hsize_t dim_callsites[] = {(hsize_t)nprocs, (hsize_t)max_callsites_size, 5};
+  hsize_t dim_pattern[] =   {(hsize_t)nprocs, (hsize_t)max_pattern_size,   3};
+  //hsize_t dim_call_pattern[] = {(hsize_t)nprocs,(hsize_t)mpi_stats->size_call_pattern(), 4};
 
   create_space(h5file,"app_time", 1, dims );
   create_space(h5file,"mpi_time", 1, dims );
   create_space(h5file,"calls", 3, dim_calls );
   create_space(h5file,"callsites", 3, dim_callsites );
   create_space(h5file,"pattern", 3, dim_pattern );
-  create_space(h5file,"callpattern", 3, dim_call_pattern );
+  //create_space(h5file,"callpattern", 3, dim_call_pattern );
 
 
   H5Pclose(access_plist);
@@ -168,14 +182,8 @@ void append_matrix(hid_t dump_file_id, const std::string& event_name,
 
 
 // Dump out dataviz information to potentially multipe partial
-// dump files.
-void dump(mpid_data_stats* mpi_stats) {
+void hdf5_dump(mpid_data_stats* mpi_stats) {
   
-  uint64_t* calls = new uint64_t[mpi_stats->n_mpi_calls()*4];
-  uint64_t* callsites = new uint64_t[mpi_stats->n_mpi_calls()*4];
-  uint64_t* pattern = new uint64_t[mpi_stats->size_pattern()*3];
-  uint64_t* callpattern = new uint64_t[mpi_stats->size_call_pattern()*4];
-
   MPI_Comm comm = MPI_COMM_WORLD;
   hid_t dump_file_id;
   std::string dump_file_name = get_dump_file("perf-dump");
@@ -185,23 +193,29 @@ void dump(mpid_data_stats* mpi_stats) {
   uint64_t app_time = mpi_stats->app_time();
   uint64_t mpi_time = mpi_stats->mpi_time();
 
-  mpi_stats->calls_data(calls);
-  mpi_stats->callsites_data(callsites);
-  mpi_stats->pattern_data(pattern);
-  mpi_stats->call_pattern_data(callpattern);
 
   append_row(dump_file_id, "app_time", &app_time, comm);
   append_row(dump_file_id, "mpi_time", &mpi_time, comm);
 
-  // Get the calls data
-  append_matrix(dump_file_id, "calls", calls, comm,mpi_stats->n_mpi_calls(),4);
-  append_matrix(dump_file_id, "callsites", callsites, comm,mpi_stats->n_mpi_calls(),4);
+  uint64_t* calls =     new uint64_t[max_calls_size*4];
+  mpi_stats->calls_data(calls);
+  append_matrix(dump_file_id, "calls", calls, comm, max_calls_size, 4);
+  delete[] calls;
+
+  uint64_t* callsites = new uint64_t[max_callsites_size *5];
+  mpi_stats->callsites_data(callsites);
+  append_matrix(dump_file_id, "callsites", callsites, comm, max_callsites_size, 5);
+  delete[] callsites;
+  uint64_t* pattern = new uint64_t[max_pattern_size*3];
+  mpi_stats->pattern_data(pattern);
   append_matrix(dump_file_id, "pattern", pattern, comm,mpi_stats->size_pattern(),3);
-  append_matrix(dump_file_id, "callpattern", callpattern, comm,mpi_stats->size_call_pattern(),4);
+  delete[] pattern;
+  //uint64_t* callpattern = new uint64_t[max_pattern_size*4];
+  //mpi_stats->call_pattern_data(callpattern);
+  //append_matrix(dump_file_id, "callpattern", callpattern, comm,mpi_stats->size_call_pattern(),4);
+  //delete[] callpattern;
+
+  // Get the calls data
   H5Fclose(dump_file_id);
 
-  delete calls;
-  delete callsites;
-  delete pattern;
-  delete callpattern;
 }

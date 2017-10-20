@@ -5,27 +5,10 @@
 #include "util.hh"
 
 
-std::string m_names[] = {"MPI_Init",
-                       "MPI_Finalize",
-                       "MPI_Comm_size",
-                       "MPI_Comm_rank",
-                       "MPI_Send",
-                       "MPI_Isend",
-                       "MPI_Recv",
-                       "MPI_Irecv",
-                       "MPI_Wait",
-                       "MPI_Waitall",
-                       "MPI_Waitany",
-                       "MPI_Allreduce",
-                       "MPI_Bcast",
-                       "MPI_Comm_split",
-                       "MPI_Alltoall",
-                       "MPI_Send_init",
-                       "MPI_Recv_init"};
-
-mpid_data_stats::mpid_data_stats(std::string p_section_name) : m_section_name(p_section_name){
+mpid_data_stats::mpid_data_stats(std::string p_section_name, std::string* p_call_names) : m_section_name(p_section_name), m_call_names(p_call_names){
     PMPI_Comm_size(MPI_COMM_WORLD, &m_num_ranks); 
     PMPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
+    m_enabled = true;
 }
 
 void 
@@ -35,10 +18,15 @@ mpid_data_stats::mpid_init(){
 
 void 
 mpid_data_stats::mpid_finalize(){
+   
     gettimeofday(&m_timer_end, NULL);
+    m_enabled = false;
     m_app_time = (m_timer_end.tv_sec - m_timer_start.tv_sec)*1e6 + (m_timer_end.tv_usec - m_timer_start.tv_usec);
     m_app_time /= 1000;
-    dump(this);
+    //Create a dict file with the callsites symbols and fn names ids
+    dump_symbols(m_call_names);
+    //binary dump to hdf5
+    hdf5_dump(this);
 }
 
 void 
@@ -61,8 +49,9 @@ void
 mpid_data_stats::mpid_call_stats(int p_count, int p_datatype, uint64_t p_time, int p_name){
     uint64_t pc;
     int type_size;
+    if(!m_enabled) return;
     backtrace(&pc);
-    MPI_Type_size(p_datatype,&type_size);
+    PMPI_Type_size(p_datatype,&type_size);
     type_size *= p_count;
     if(m_global_call_data.find(p_name)==m_global_call_data.end()){
         m_global_call_data[p_name].m_kbytes_sent = 0;
@@ -88,7 +77,8 @@ void
 mpid_data_stats::mpid_traffic_pattern(int dest, int p_count, int p_datatype, int comm, int p_name){
     uint64_t pc;
     int type_size;
-    MPI_Type_size(p_datatype, &type_size);
+    if(!m_enabled) return;
+    PMPI_Type_size(p_datatype, &type_size);
     uint64_t kbytes =  type_size * p_count;
     backtrace(&pc);
     //PTP COMM
@@ -180,8 +170,8 @@ mpid_data_stats::mpid_add_communicator(MPI_Comm* newcomm){
             m_my_comm_ranks[*newcomm] = i;
     }
 
-    delete ranks;
-    delete world_ranks;
+    delete[] ranks;
+    delete[] world_ranks;
 
 }
 
@@ -231,15 +221,18 @@ mpid_data_stats::callsites_data(uint64_t *p_data_out){
     int i=0;
     for(auto it=m_mpi_call_data.begin();it!=m_mpi_call_data.end();it++){ 
         //printf("%ld\n",it->first);
-        p_data_out[i*4+0] = it->first;
-        p_data_out[i*4+1] = it->second.m_total_calls;
-        p_data_out[i*4+2] = it->second.m_time_spent;
-        p_data_out[i*4+3] = it->second.m_kbytes_sent;
+        p_data_out[i*5+0] = it->first;
+        p_data_out[i*5+1] = it->second.m_name;
+        p_data_out[i*5+2] = it->second.m_total_calls;
+        p_data_out[i*5+3] = it->second.m_time_spent;
+        p_data_out[i*5+4] = it->second.m_kbytes_sent;
         //if(m_rank==3){
-        //    printf("%ld %ld %ld %ld %ld\n",it->first,p_data_out[i*4+0],p_data_out[i*4+1],p_data_out[i*4+2], p_data_out[i*4+3]);
+        //    printf("%ld %ld %ld %ld %ld\n",p_data_out[i*4+0],p_data_out[i*4+1],p_data_out[i*4+2], p_data_out[i*4+3],p_data_out[i*4+4]);
         //}
         i++;
     }
+    //printf("size is %d , *4 is %d i is %d\n",n_mpi_callsites(),n_mpi_callsites()*4,i);
+    //printf("rank %d size %d\n",m_rank,m_mpi_call_data.size());
 }
 
 void 
@@ -247,9 +240,9 @@ mpid_data_stats::pattern_data(uint64_t *p_data_out){
 
     int i=0;
     for(auto it=m_pattern.begin();it!=m_pattern.end();it++){ 
-        p_data_out[i*4+0] = it->first;
-        p_data_out[i*4+1] = it->second.m_kbytes;
-        p_data_out[i*4+2] = it->second.m_count;
+        p_data_out[i*3+0] = it->first;
+        p_data_out[i*3+1] = it->second.m_kbytes;
+        p_data_out[i*3+2] = it->second.m_count;
         //if(m_rank==3){
         //    printf("%d %ld %ld\n %ld",it->first,p_data_out[i*4+0],p_data_out[i*4+1],p_data_out[i*4+2]);
         //}

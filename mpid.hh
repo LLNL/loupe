@@ -2,13 +2,14 @@
 #define __MPID_HH
 
 #include <map>
+#include <string>
 #include <vector>
 #include <sys/time.h>
 
 class mpid_data_stats {
 
   public:
-    mpid_data_stats(std::string p_section_name);
+    mpid_data_stats(std::string p_section_name, std::string* p_call_names);
 
     void mpid_init();
     void mpid_finalize();
@@ -81,6 +82,9 @@ class mpid_data_stats {
     uint64_t m_mpi_acc_time;
 
     std::string m_section_name;
+    std::string* m_call_names;
+
+    bool m_enabled;
 };
 
 #endif
