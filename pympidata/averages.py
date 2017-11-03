@@ -34,7 +34,30 @@ def print_avgs(metrics):
 
     print tabulate(table,headers=['MPI callsite', '#Calls','Acc. Time(us)','Acc. Bytes','Time per call (us)','Bytes per call'],tablefmt='orgtbl')
 
+    print '\nTOTAL RESULTS PER MPI OP\n'
+    table = []
+    for call in metrics['total']['calls']:
+        table.append([call,int(metrics['total']['calls'][call]['#calls']),
+                      int(metrics['total']['calls'][call]['acc_time']),
+                      int(metrics['total']['calls'][call]['kbytes']),
+                      int(metrics['total']['calls'][call]['time_per_call']),
+                      int(metrics['total']['calls'][call]['bytes_per_call']) ])
+
+    print tabulate(table,headers=['MPI call', '#Calls','Acc. Time(us)','Acc. Bytes','Time per call (us)','Bytes per call'],tablefmt='orgtbl')
+
+    print '\nTOTAL RESULTS PER MPI CALL SITE\n'
+    table = []
+    for call in metrics['total']['callsites']:
+        table.append([call,int(metrics['total']['callsites'][call]['#calls']),
+                      int(metrics['total']['callsites'][call]['acc_time']),
+                      int(metrics['total']['callsites'][call]['kbytes']),
+                      int(metrics['total']['callsites'][call]['time_per_call']),
+                      int(metrics['total']['callsites'][call]['bytes_per_call']) ])
+
+    print tabulate(table,headers=['MPI callsite', '#Calls','Acc. Time(us)','Acc. Bytes','Time per call (us)','Bytes per call'],tablefmt='orgtbl')
+
 dr = parser.DataReader() 
 ds = dataset.Dataset(dr.read_files(sys.argv[1]))
 ds.averages()
+ds.totals()
 print_avgs(ds.metrics())

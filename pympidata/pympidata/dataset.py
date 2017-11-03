@@ -11,7 +11,12 @@ class Dataset(object):
         self._metrics['avg']['calls'] = self.__average_section('calls')
         self._metrics['avg']['callsites'] = self.__average_section('callsites')
         self.__average_header()
-  
+ 
+    def totals(self):
+        self._metrics['total'] = {}
+        self._metrics['total']['calls'] = self.__total_section('calls')
+        self._metrics['total']['callsites'] = self.__total_section('callsites')
+
     def __average_header(self):
         self._metrics['avg']['app_time']=np.average(self._metrics['app_time'])
         self._metrics['avg']['mpi_time']=np.average(self._metrics['mpi_time'])
@@ -40,6 +45,24 @@ class Dataset(object):
                         n = calls[call]['samples']+1
                         calls[call][field] = u_i+1/n*(x_i-u_i)
                     calls[call]['samples']+=1
+        return calls
+
+    def __total_section(self,section):
+        calls = {}
+        fields = ('#calls','acc_time','kbytes','time_per_call','bytes_per_call')
+        # Look for all the calls in the table
+        #Some process might not be calling some mpi ops
+        for rank in range(self._metrics['total_ranks']):
+            for call in self._metrics[rank][section]:
+                if not call in calls:
+                    calls[call] = {}
+                    for field in fields:
+                         calls[call][field] = 0.0
+
+        for rank in range(self._metrics['total_ranks']):
+            for call in self._metrics[rank][section]:
+                    for field in fields:
+                        calls[call][field] += self._metrics[rank][section][call][field]
         return calls
 
     #param can be bytes or #calls

@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include "util.hh"
 
 std::map<uint64_t, std::string> g_symbols;
@@ -32,11 +33,15 @@ void backtrace(uint64_t *pc_val) {
     unw_get_reg(&cursor, UNW_REG_IP, &pc);
     *pc_val = pc;
     if(g_symbols.find(pc)==g_symbols.end()){
-        int status; 
         if (unw_get_proc_name(&cursor, aux, sizeof(aux), &offset) == 0) {
+            int status; 
             char* demangled = abi::__cxa_demangle(aux, nullptr, nullptr, &status);
-            sprintf(sym,"(%s+0x%lx)", demangled, offset);
-            std::free(demangled);
+            if(demangled){
+                sprintf(sym,"(%s+0x%lx)", demangled, offset);
+                std::free(demangled);
+            } else {
+                sprintf(sym,"(%s+0x%lx)", aux, offset);
+            }
         } else {
             sprintf(sym,"(UNKNOWN+0x%lx)", offset);
         }
@@ -46,11 +51,13 @@ void backtrace(uint64_t *pc_val) {
 
 
 // Creates a dict file for the PC and the calls name
-void dump_symbols(std::string* callnames){
+void dump_symbols(std::string* callnames, const std::string& name){
     //Prepare all the data in the symbols
     //We will need to receive the symbols from other ranks too
     //ALL GATHER
-    std::ofstream myfile ("profile.sym");
+    std::ostringstream filename;
+    filename << name << ".sym";
+    std::ofstream myfile (filename.str());
     for(auto it=g_symbols.begin();it!=g_symbols.end();it++){
         myfile << it->first << "\t"<< it->second <<std::endl; 
     }

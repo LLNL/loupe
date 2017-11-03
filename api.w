@@ -97,9 +97,9 @@ std::string g_f_names[] = { {{forallfn foo}}
 
     g_mpi_stats->mpid_call_stats(count, datatype, elapsed, f_{{foo}});
     //Only measure traffic for the root
-    if (g_mpi_stats->is_me(root, comm)){
-        g_mpi_stats->mpid_traffic_pattern(-1, count, datatype, comm, f_{{foo}});
-    }
+    //if (g_mpi_stats->is_me(root, comm)){
+    //    g_mpi_stats->mpid_traffic_pattern(-1, count, datatype, comm, f_{{foo}});
+    //}
 
 }
 {{endfn}}
@@ -113,7 +113,7 @@ std::string g_f_names[] = { {{forallfn foo}}
     elapsed = g_mpi_stats->mpid_call_end(f_{{foo}});
 
     g_mpi_stats->mpid_call_stats(sendcount, sendtype, elapsed, f_{{foo}});
-    g_mpi_stats->mpid_traffic_pattern(-1, sendcount, sendtype, comm, f_{{foo}});
+    //g_mpi_stats->mpid_traffic_pattern(-1, sendcount, sendtype, comm, f_{{foo}});
 
 }
 {{endfn}}
@@ -127,7 +127,7 @@ std::string g_f_names[] = { {{forallfn foo}}
     elapsed = g_mpi_stats->mpid_call_end(f_{{foo}});
 
     g_mpi_stats->mpid_call_stats(count, datatype, elapsed, f_{{foo}});
-    g_mpi_stats->mpid_traffic_pattern(-1, count, datatype, comm, f_{{foo}});
+    //g_mpi_stats->mpid_traffic_pattern(-1, count, datatype, comm, f_{{foo}});
 }
 {{endfn}}
 

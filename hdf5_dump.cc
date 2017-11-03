@@ -84,7 +84,6 @@ hid_t create_dump_file(const std::string& filename, mpid_data_stats* mpi_stats) 
   PMPI_Allreduce(&calls_size,     &max_calls_size, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   PMPI_Allreduce(&callsites_size, &max_callsites_size, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
   PMPI_Allreduce(&pattern_size,   &max_pattern_size, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-
   hsize_t dim_calls[] =     {(hsize_t)nprocs, (hsize_t)max_calls_size,     4};
   hsize_t dim_callsites[] = {(hsize_t)nprocs, (hsize_t)max_callsites_size, 5};
   hsize_t dim_pattern[] =   {(hsize_t)nprocs, (hsize_t)max_pattern_size,   3};
@@ -182,11 +181,11 @@ void append_matrix(hid_t dump_file_id, const std::string& event_name,
 
 
 // Dump out dataviz information to potentially multipe partial
-void hdf5_dump(mpid_data_stats* mpi_stats) {
+void hdf5_dump(mpid_data_stats* mpi_stats,const std::string& name) {
   
   MPI_Comm comm = MPI_COMM_WORLD;
   hid_t dump_file_id;
-  std::string dump_file_name = get_dump_file("perf-dump");
+  std::string dump_file_name = get_dump_file(name);
 
   dump_file_id = create_dump_file(dump_file_name, mpi_stats);
 
