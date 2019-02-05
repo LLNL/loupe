@@ -1,17 +1,6 @@
-##############################################################################
-# Copyright (c) 2018, Lawrence Livermore National Security, LLC.
-# Produced at the Lawrence Livermore National Laboratory.
-#
-# Written by Emilio Castillo <ecastill@bsc.es>.
-# LLNL-CODE-745958. All rights reserved.
-#
-# This file is part of Loupe. For details, see:
-# https://github.com/LLNL/loupe
-# Please also read the LICENSE file for the MIT License notice.
-##############################################################################
-
 import h5py
 import numpy as np
+from collections import defaultdict
 
 class DataReader(object) :
 
@@ -50,7 +39,7 @@ class DataReader(object) :
         return self._metrics
 
     def __read_symbols(self, path):
-        symbols = {}
+        symbols = defaultdict(str)
         with open(path,'r') as f:
             for line in f:
                 tokens = line.split()
@@ -78,8 +67,8 @@ class DataReader(object) :
             rank_stats[key]['acc_time'] = call[3]
             rank_stats[key]['kbytes']   = call[4]
 
-            rank_stats[key]['time_per_call']  = call[2]/call[1]
-            rank_stats[key]['bytes_per_call'] = call[3]/call[1]
+            rank_stats[key]['time_per_call']  = call[3]/call[2]
+            rank_stats[key]['bytes_per_call'] = call[4]/call[2]
 
     def __get_pattern_data(self, rank_stats, dataset):
         for pat in dataset:
