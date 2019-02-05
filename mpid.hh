@@ -15,6 +15,7 @@
 
 #include <map>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <sys/time.h>
 
@@ -50,6 +51,9 @@ class mpid_data_stats {
     void callsites_data(uint64_t *p_data_out);
     void pattern_data(uint64_t *p_data_out);
     void call_pattern_data(uint64_t *p_data_out);
+
+    void enable(){ m_enabled = true;}
+    void disable(){ m_enabled = false;}
   private:
 
     mpid_data_stats(const mpid_data_stats&);  
@@ -97,6 +101,7 @@ class mpid_data_stats {
     std::string* m_call_names;
 
     bool m_enabled;
+    std::ostringstream m_file_name;
 };
 
 #endif
