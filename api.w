@@ -26,6 +26,16 @@ std::string g_f_names[] = { {{forallfn foo}}
                             "{{foo}}", 
                             {{endforallfn}}};
 
+{{fn foo MPI_Pcontrol}}{
+    {{callfn}}
+    if(level)
+        g_mpi_stats->enable();
+    else
+        g_mpi_stats->disable();
+
+}
+{{endfn}}
+
 {{fn foo MPI_Init }}{
     {{callfn}}
     // Create the GLOBAL profiling data
@@ -105,7 +115,7 @@ std::string g_f_names[] = { {{forallfn foo}}
 {{endfn}}
 
 
-{{fn MPI_Alltoall}}{
+{{fn foo MPI_Alltoall}}{
 
     uint64_t long elapsed;
     g_mpi_stats->mpid_call_start(f_{{foo}});
@@ -119,16 +129,14 @@ std::string g_f_names[] = { {{forallfn foo}}
 {{endfn}}
 
 
-{{fn MPI_Allreduce}}{
+{{fn foo MPI_Allreduce}}{
 
     uint64_t long elapsed;
     g_mpi_stats->mpid_call_start(f_{{foo}});
     {{callfn}}
     elapsed = g_mpi_stats->mpid_call_end(f_{{foo}});
-
     g_mpi_stats->mpid_call_stats(count, datatype, elapsed, f_{{foo}});
     //g_mpi_stats->mpid_traffic_pattern(-1, count, datatype, comm, f_{{foo}});
 }
 {{endfn}}
-
 

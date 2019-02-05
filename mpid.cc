@@ -25,6 +25,13 @@ mpid_data_stats::mpid_data_stats(std::string p_section_name, std::string* p_call
 
 void 
 mpid_data_stats::mpid_init(){
+    //Read the output where we want the profile
+    const char *dump_steps_var = getenv("MPI_PROF_OUT");
+    if (dump_steps_var) {
+        m_file_name << dump_steps_var;   
+    } else {
+        m_file_name << "mpi_profile";
+    }
     gettimeofday(&m_timer_start, NULL);
 }
 
@@ -36,9 +43,9 @@ mpid_data_stats::mpid_finalize(){
     m_app_time = (m_timer_end.tv_sec - m_timer_start.tv_sec)*1e6 + (m_timer_end.tv_usec - m_timer_start.tv_usec);
     m_app_time /= 1000;
     //Create a dict file with the callsites symbols and fn names ids
-    dump_symbols(m_call_names);
+    dump_symbols(m_call_names, m_file_name.str());
     //binary dump to hdf5
-    hdf5_dump(this);
+    hdf5_dump(this,m_file_name.str());
 }
 
 void 
